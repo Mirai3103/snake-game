@@ -1,67 +1,105 @@
 import pygame
+from constant import SIZE, BACKGROUND, SQUARE_RECT, SQUARE_COLOR, SQUARE_X2, SQUARE_Y2, SQUARE_Y1, SQUARE_X1
+import copy
+
+
+class SnakeBodyStatus:
+    def __init__(self, x, y, direction):
+        self.x = x
+        self.y = y
+        self.direction = direction
 
 
 class Snake:
     def __init__(self, screen):
-        self.length = 1
-        self.step = 20
+        self.length = 2
+        self.step = SIZE
         self.screen = screen
-        self.block = pygame.image.load('./resource/block.png').convert()
-        self.block = pygame.transform.scale(self.block, (20, 20))
-        self.x = [20] * self.length
-        self.y = [20] * self.length
+        head_right = pygame.image.load('./resource/snakehead.png').convert_alpha()
+        head_right = pygame.transform.scale(head_right, (SIZE, SIZE))
+        self.head = {
+            'right': head_right,
+            'left': pygame.transform.rotate(head_right, 180),
+            'up': pygame.transform.rotate(head_right, 90),
+            'down': pygame.transform.rotate(head_right, 270)
+        }
+        body_horizontal = pygame.image.load('./resource/snakebody.png').convert_alpha()
+        body_horizontal = pygame.transform.scale(body_horizontal, (SIZE, SIZE))
+        self.body = {
+            'right': body_horizontal,
+            'left': body_horizontal,
+            'up': pygame.transform.rotate(body_horizontal, 90),
+            'down': pygame.transform.rotate(body_horizontal, 90)
+        }
+        last_body_right = pygame.image.load('./resource/lastbody.png').convert_alpha()
+        last_body_right = pygame.transform.scale(last_body_right, (SIZE, SIZE))
+        self.last_body = {
+            'right': last_body_right,
+            'left': pygame.transform.rotate(last_body_right, 180),
+            'up': pygame.transform.rotate(last_body_right, 90),
+            'down': pygame.transform.rotate(last_body_right, 270)
+        }
+
+        self.locations = [SnakeBodyStatus(120, 120, 'right'), SnakeBodyStatus(120, 120, 'right')]
         self.direction = 'right'
 
     def append(self):
         self.length += 1
-        self.x.append(self.x[0])
-        self.y.append(self.x[0])
+        self.locations.append(copy.copy(self.locations[self.length - 2]))
 
     def is_eat_itself(self):
-        for i in range(3, self.length):
-            if self.x[0] == self.x[i] and self.y[0] == self.y[i]:
-                return True
+        if self.length > 3:
+            for i in range(3, self.length):
+                if self.locations[0].x == self.locations[i].x and self.locations[0].y == self.locations[i].y:
+                    return True
         return False
 
     def draw(self):
-        self.screen.fill((255, 255, 255))
+        self.screen.fill(BACKGROUND)
+        pygame.draw.rect(self.screen, SQUARE_COLOR, pygame.Rect(SQUARE_RECT), 2)
         for i in range(self.length):
-            self.screen.blit(self.block, (self.x[i], self.y[i]))
+            if i == 0:
+                self.screen.blit(self.head[self.locations[i].direction], (self.locations[i].x, self.locations[i].y))
+            elif i == self.length - 1:
+                self.screen.blit(self.last_body[self.locations[i].direction],
+                                 (self.locations[i].x, self.locations[i].y))
+            else:
+                self.screen.blit(self.body[self.locations[i].direction], (self.locations[i].x, self.locations[i].y))
         pygame.display.flip()
 
     def move_left(self):
-        self.direction = 'left'
+        if self.locations[0].direction != 'right':
+            self.locations[0].direction = 'left'
 
     def move_right(self):
-        self.direction = 'right'
+        if self.locations[0].direction != 'left':
+            self.locations[0].direction = 'right'
 
     def move_up(self):
-        self.direction = 'up'
+        if self.locations[0].direction != 'down':
+            self.locations[0].direction = 'up'
 
     def move_down(self):
-        self.direction = 'down'
+        if self.locations[0].direction != 'up':
+            self.locations[0].direction = 'down'
 
-    def reset_location(self):
-        if self.x[0] > self.screen.get_width():
-            self.x[0] = 0
-        if self.x[0] < 0:
-            self.x[0] = self.screen.get_width()
-        if self.y[0] < 0:
-            self.y[0] = self.screen.get_height()
-        if self.y[0] > self.screen.get_height():
-            self.y[0] = 0
+    def is_eat_square(self):
+        if self.locations[0].x < SQUARE_X1 or self.locations[0].y < SQUARE_Y1 or self.locations[0].x > SQUARE_X2 or \
+                self.locations[0].y > SQUARE_Y2:
+            return True
+        return False
 
     def run(self):
         for i in range(self.length - 1, 0, -1):
-            self.x[i] = self.x[i - 1]
-            self.y[i] = self.y[i - 1]
-        if self.direction == 'right':
-            self.x[0] += self.step
-        elif self.direction == 'left':
-            self.x[0] -= self.step
-        elif self.direction == 'up':
-            self.y[0] -= self.step
-        elif self.direction == 'down':
-            self.y[0] += self.step
-        self.reset_location()
+            self.locations[i].x = self.locations[i - 1].x
+            self.locations[i].y = self.locations[i - 1].y
+            self.locations[i].direction = self.locations[i - 1].direction
+        if self.locations[0].direction == 'right':
+            self.locations[0].x += self.step
+        elif self.locations[0].direction == 'left':
+            self.locations[0].x -= self.step
+        elif self.locations[0].direction == 'up':
+            self.locations[0].y -= self.step
+        elif self.locations[0].direction == 'down':
+            self.locations[0].y += self.step
         self.draw()
